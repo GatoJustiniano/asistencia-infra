@@ -19,7 +19,7 @@ Qué crea `modules/tenant` por cada tenant:
 
 | Recurso | Para qué |
 |---|---|
-| Security Group `asistencia-<id>-sg` | Puerto 80 abierto a internet; 22 (Ansible) y 9100 (métricas) solo desde el SG de la plataforma. No hay tráfico entre tenants. |
+| Security Group `asistencia-<id>-sg` | Puerto 80 abierto a internet; 22 (Ansible), 9100 (node_exporter) y 9101 (métricas de la app) solo desde el SG de la plataforma. No hay tráfico entre tenants. |
 | `random_password` + parámetro SSM `/asistencia/<id>/admin-key` (SecureString) | Clave del panel docente. No está en el código ni en la plantilla. |
 | Rol IAM + perfil de instancia | Solo puede leer `/asistencia/<id>/*` (no los secretos de otro tenant), más Session Manager para diagnóstico |
 | Volumen EBS `asistencia-<id>-datos` (gp3, cifrado) | Base SQLite montada en `/var/lib/asistencia`. Sobrevive a suspender y a recrear la EC2. |

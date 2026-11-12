@@ -56,6 +56,7 @@ resource "aws_vpc_security_group_ingress_rule" "desde_plataforma" {
   for_each = {
     ssh           = 22   # Ansible
     node_exporter = 9100 # Prometheus: CPU, memoria, disco
+    app_metricas  = 9101 # Prometheus: métricas de la app (peticiones, 5xx, latencia, BD)
   }
   security_group_id            = aws_security_group.tenant.id
   description                  = each.key

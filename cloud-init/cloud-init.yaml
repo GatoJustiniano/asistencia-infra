@@ -45,6 +45,7 @@ write_files:
       umask 077
       cat > /etc/asistencia.env <<EOF
       PORT=80
+      METRICS_PORT=9101
       API_URL=
       CORS_ORIGIN=*
       DB_PATH=/var/lib/asistencia/asistencia.db
