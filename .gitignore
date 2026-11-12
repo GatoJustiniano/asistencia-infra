@@ -1,0 +1,23 @@
+# Node / Pulumi
+node_modules/
+pulumi/bin/
+.env
+
+# Terraform / OpenTofu
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.auto.tfvars
+tenant.tfvars.json
+
+# CloudFormation
+cloudformation/empaquetado.yaml
+
+# Packer
+packer_cache/
+manifest.json
+
+# Ansible
+*.retry
+inventario.generado.ini

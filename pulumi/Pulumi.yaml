@@ -1,0 +1,16 @@
+name: asistencia-pulumi
+description: Sistema de Asistencia en EC2 configurado con cloud-init
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+config:
+  aws:region:
+    value: us-east-1
+  aws:allowedAccountIds:
+    value: ["207381449073"]
+  aws:defaultTags:
+    value:
+      tags:
+        Proyecto: asistencia
+        Herramienta: pulumi
