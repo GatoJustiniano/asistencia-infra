@@ -8,7 +8,7 @@ Plantillas que crean y configuran **un tenant**. Las ejecuta el worker de [plata
 | `pulumi/` | Pulumi (TypeScript) | Segunda implementación reducida, para comparar. |
 | `cloudformation/` | CloudFormation | Segunda implementación reducida con stacks anidados. |
 | `cloud-init/` | cloud-init | Configuración del primer arranque de la EC2 del tenant. |
-| `packer/` | Packer | AMI base con Node, la app y node_exporter. |
+| `packer/` | Packer | AMI base de los tenants: Node.js, node_exporter y caché de dependencias de la app. |
 | `ansible/` | Ansible | Configuración posterior de las EC2 que ya existen. |
 
 ## Terraform / OpenTofu: un tenant
@@ -23,7 +23,7 @@ Qué crea `modules/tenant` por cada tenant:
 | `random_password` + parámetro SSM `/asistencia/<id>/admin-key` (SecureString) | Clave del panel docente. No está en el código ni en la plantilla. |
 | Rol IAM + perfil de instancia | Solo puede leer `/asistencia/<id>/*` (no los secretos de otro tenant), más Session Manager para diagnóstico |
 | Volumen EBS `asistencia-<id>-datos` (gp3, cifrado) | Base SQLite montada en `/var/lib/asistencia`. Sobrevive a suspender y a recrear la EC2. |
-| EC2 `asistencia-<id>-app` (IMDSv2, disco raíz cifrado) | Frontend y backend. cloud-init monta el volumen, lee el secreto de SSM e instala la app. |
+| EC2 `asistencia-<id>-app` (IMDSv2, disco raíz cifrado) | Frontend y backend. Arranca con la AMI de Packer más reciente (tag `Rol=ami-tenant`); cloud-init monta el volumen, lee el secreto de SSM e instala la app. |
 | `aws_ec2_instance_state` | `suspendido = true` detiene la EC2; `false` la vuelve a arrancar |
 
 Probar a mano (el worker hará lo mismo, generando el `.tfvars.json` desde `catalogo/planes.json`):
@@ -47,9 +47,8 @@ Con OpenTofu los comandos son los mismos, cambiando `terraform` por `tofu`.
 ## Pendiente
 
 1. **Pulumi y CloudFormation:** todavía son la versión del práctico anterior (crean su propia VPC y usan las variables viejas de cloud-init). Hay que darles la misma interfaz que el módulo `tenant`, en versión reducida.
-2. **Packer y Ansible:** ver el README de cada carpeta. Mientras no exista la AMI, cloud-init instala Node y la app en el arranque.
-3. **node_exporter:** se instala con Packer. Hasta entonces, el puerto 9100 está abierto pero nadie escucha.
-4. **Respaldos (fase final):** snapshots del volumen de datos.
+2. **Ansible:** ver `ansible/README.md`.
+3. **Respaldos (fase final):** snapshots del volumen de datos.
 
 ## Reglas
 

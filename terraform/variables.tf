@@ -96,7 +96,7 @@ variable "app_version" {
 }
 
 variable "ami_id" {
-  description = "AMI construida con Packer; null usa la última Amazon Linux 2023"
+  description = "AMI fija; null usa la AMI de Packer más reciente (tag Rol=ami-tenant) o, si no hay, Amazon Linux 2023"
   type        = string
   default     = null
 }

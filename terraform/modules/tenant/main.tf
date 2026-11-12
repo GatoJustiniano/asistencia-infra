@@ -12,6 +12,19 @@ data "aws_subnet" "elegida" {
   id = var.subnet_id
 }
 
+# AMI de Packer más reciente (packer/); si todavía no hay ninguna, Amazon Linux 2023
+data "aws_ami_ids" "packer" {
+  owners = ["self"]
+  filter {
+    name   = "tag:Rol"
+    values = ["ami-tenant"]
+  }
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+}
+
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -123,7 +136,8 @@ resource "aws_ebs_volume" "datos" {
 # ---------- Cómputo ----------
 
 resource "aws_instance" "app" {
-  ami                    = coalesce(var.ami_id, data.aws_ami.al2023.id)
+  # aws_ami_ids devuelve las AMIs de la más nueva a la más antigua
+  ami                    = coalesce(var.ami_id, try(data.aws_ami_ids.packer.ids[0], null), data.aws_ami.al2023.id)
   instance_type          = var.instance_type
   subnet_id              = var.subnet_id
   vpc_security_group_ids = [aws_security_group.tenant.id]
@@ -158,6 +172,12 @@ resource "aws_instance" "app" {
   user_data_replace_on_change = true
 
   tags = { Name = "${local.prefijo}-app" }
+
+  lifecycle {
+    # Una AMI nueva se usa en los tenants nuevos y cuando la instancia se recrea
+    # (p. ej. al cambiar app_version); no reemplaza por sí sola a los que ya existen.
+    ignore_changes = [ami]
+  }
 
   # El rol debe poder leer SSM antes de que arranque cloud-init
   depends_on = [aws_iam_role_policy.leer_ssm_propio, aws_ssm_parameter.admin_key]

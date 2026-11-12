@@ -33,3 +33,7 @@ output "estado_instancia" {
 output "ssm_prefijo" {
   value = local.ssm_prefijo
 }
+
+output "ami_id" {
+  value = aws_instance.app.ami
+}

@@ -27,3 +27,8 @@ output "estado_instancia" {
 output "ssm_prefijo" {
   value = module.tenant.ssm_prefijo
 }
+
+output "ami_id" {
+  description = "AMI con la que se creó la instancia (Packer o Amazon Linux 2023)"
+  value       = module.tenant.ami_id
+}

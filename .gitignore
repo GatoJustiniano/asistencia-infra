@@ -17,6 +17,7 @@ cloudformation/empaquetado.yaml
 # Packer
 packer_cache/
 manifest.json
+manifest.json.lock
 
 # Ansible
 *.retry

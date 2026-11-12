@@ -5,15 +5,8 @@
 #   DemoData, MaxEstudiantes, MaxDocentes, MaxCursos
 # Ningún secreto viaja en este archivo: la clave del panel se lee de SSM con el rol de la instancia.
 # Nota: en las plantillas de Terraform, "$${...}" es una variable de shell y no de la plantilla.
-package_update: true
-packages:
-  - git
-  - nodejs
-  - npm
-  - gcc-c++
-  - make
-  - python3
-  - xfsprogs
+# Los paquetes (Node.js, git, node_exporter...) ya vienen en la AMI de Packer.
+# Si la instancia arranca con Amazon Linux 2023 sin preparar, el script los instala.
 
 write_files:
   - path: /usr/local/bin/asistencia-preparar.sh
@@ -21,6 +14,11 @@ write_files:
     content: |
       #!/bin/bash
       set -euo pipefail
+
+      # 0) Sin AMI de Packer: instalar lo mínimo (sin node_exporter no habrá métricas)
+      if ! command -v node >/dev/null 2>&1; then
+        dnf -y install git nodejs npm gcc-c++ make python3 xfsprogs
+      fi
 
       # 1) Volumen de datos del tenant: esperar a que se adjunte, formatear solo si está vacío, montar
       VOL_ID="${VolumenDatos}"
