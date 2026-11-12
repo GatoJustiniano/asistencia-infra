@@ -28,7 +28,7 @@ write_files:
       for i in $(seq 1 60); do [ -e "$DEV" ] && break; echo "Esperando volumen $VOL_ID ($i)"; sleep 5; done
       [ -e "$DEV" ] || { echo "El volumen de datos no se adjuntó"; exit 1; }
       if ! blkid "$DEV" >/dev/null 2>&1; then
-        mkfs.xfs -L asistencia-datos "$DEV"
+        mkfs.xfs -L asist-datos "$DEV" # XFS: etiqueta de máx. 12 caracteres
       fi
       mkdir -p /var/lib/asistencia
       UUID=$(blkid -s UUID -o value "$DEV")
