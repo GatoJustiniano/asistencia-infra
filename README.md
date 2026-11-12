@@ -11,19 +11,45 @@ Plantillas que crean y configuran **un tenant**. Las ejecuta el worker de [plata
 | `packer/` | Packer | AMI base con Node, la app y node_exporter. |
 | `ansible/` | Ansible | Configuración posterior de las EC2 que ya existen. |
 
-## Estado actual
+## Terraform / OpenTofu: un tenant
 
-`terraform/`, `pulumi/`, `cloudformation/` y `cloud-init/` se copiaron sin cambios del práctico anterior (`infrastructure_as_code`). Lo único que cambia es que `RepoUrl` apunta ahora a `asistencia-app`. Todavía crean **una VPC por despliegue**.
+Requiere que antes se hayan aplicado `plataforma-tenants/infra/bootstrap` (bucket del estado) e `infra/red` (VPC compartida y SG de la plataforma). El tenant encuentra la VPC, las subredes y el SG de la plataforma **por tags**, así que no recibe ids de red.
 
-## Pendiente para el proyecto final
+Qué crea `modules/tenant` por cada tenant:
 
-1. **Red compartida:** sacar `network` a un stack propio que se crea una sola vez. Cada tenant recibe `vpc_id` y `subnet_id` como entradas, porque AWS permite solo 5 VPC por región.
-2. **Módulo `tenant`:** Security Group, volumen EBS de datos cifrado (SQLite) y EC2. Las variables son `tenant_id`, `entorno`, `plan`, `instance_type`, `data_volume_gb` y `ami_id`. Los tags `Tenant`, `Entorno` y `Plan` sirven para que Prometheus descubra la instancia.
-3. **Backend S3 del estado:** la clave es `tenants/<tenant_id>/terraform.tfstate`, con lock. Se configura con `-backend-config` desde el worker.
-4. **Secretos:** `AdminKey` deja de ser una variable. cloud-init la lee de SSM en `/asistencia/<tenant>/admin-key` usando el rol IAM de la instancia.
-5. **Suspender:** un recurso `aws_ec2_instance_state` con `state = var.suspendido ? "stopped" : "running"`. El volumen EBS se conserva.
-6. **Pulumi y CloudFormation:** la misma interfaz que el módulo `tenant`, en versión reducida.
-7. **Packer y Ansible:** ver el README de cada carpeta.
+| Recurso | Para qué |
+|---|---|
+| Security Group `asistencia-<id>-sg` | Puerto 80 abierto a internet; 22 (Ansible) y 9100 (métricas) solo desde el SG de la plataforma. No hay tráfico entre tenants. |
+| `random_password` + parámetro SSM `/asistencia/<id>/admin-key` (SecureString) | Clave del panel docente. No está en el código ni en la plantilla. |
+| Rol IAM + perfil de instancia | Solo puede leer `/asistencia/<id>/*` (no los secretos de otro tenant), más Session Manager para diagnóstico |
+| Volumen EBS `asistencia-<id>-datos` (gp3, cifrado) | Base SQLite montada en `/var/lib/asistencia`. Sobrevive a suspender y a recrear la EC2. |
+| EC2 `asistencia-<id>-app` (IMDSv2, disco raíz cifrado) | Frontend y backend. cloud-init monta el volumen, lee el secreto de SSM e instala la app. |
+| `aws_ec2_instance_state` | `suspendido = true` detiene la EC2; `false` la vuelve a arrancar |
+
+Probar a mano (el worker hará lo mismo, generando el `.tfvars.json` desde `catalogo/planes.json`):
+
+```bash
+cd terraform
+```
+
+```bash
+terraform init -reconfigure -backend-config="key=tenants/san-marcos/terraform.tfstate"
+```
+
+```bash
+terraform apply -var-file=ejemplos/basico.tfvars.json
+```
+
+Suspender y reanudar: el mismo `apply` con `-var suspendido=true` o `-var suspendido=false`. Para eliminar: `terraform plan -destroy -var-file=...` (para revisar qué se borrará) y después `terraform destroy -var-file=...`.
+
+Con OpenTofu los comandos son los mismos, cambiando `terraform` por `tofu`.
+
+## Pendiente
+
+1. **Pulumi y CloudFormation:** todavía son la versión del práctico anterior (crean su propia VPC y usan las variables viejas de cloud-init). Hay que darles la misma interfaz que el módulo `tenant`, en versión reducida.
+2. **Packer y Ansible:** ver el README de cada carpeta. Mientras no exista la AMI, cloud-init instala Node y la app en el arranque.
+3. **node_exporter:** se instala con Packer. Hasta entonces, el puerto 9100 está abierto pero nadie escucha.
+4. **Respaldos (fase final):** snapshots del volumen de datos.
 
 ## Reglas
 
