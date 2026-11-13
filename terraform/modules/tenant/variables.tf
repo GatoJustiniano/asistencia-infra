@@ -35,6 +35,12 @@ variable "ami_id" {
 
 variable "demo_data" { type = bool }
 
+variable "limite_permisos" {
+  description = "Nombre de la política de permissions boundary del rol; vacío = sin límite"
+  type        = string
+  default     = ""
+}
+
 variable "cloud_init" {
   description = "Ruta de la plantilla cloud-init"
   type        = string

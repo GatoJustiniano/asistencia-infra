@@ -101,6 +101,12 @@ variable "ami_id" {
   default     = null
 }
 
+variable "limite_permisos" {
+  description = "Nombre de la política IAM que se usa como permissions boundary del rol del tenant (la crea plataforma-tenants/infra/plataforma). Vacío = sin límite."
+  type        = string
+  default     = "asistencia-limite-tenant"
+}
+
 variable "demo_data" {
   description = "Carga los datos de ejemplo si la base está vacía"
   type        = bool

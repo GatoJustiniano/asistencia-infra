@@ -90,6 +90,8 @@ resource "aws_ssm_parameter" "admin_key" {
 
 resource "aws_iam_role" "tenant" {
   name = "${local.prefijo}-rol"
+  # Techo de permisos: el worker de la plataforma solo puede crear roles con este límite
+  permissions_boundary = var.limite_permisos == "" ? null : "arn:aws:iam::${data.aws_caller_identity.actual.account_id}:policy/${var.limite_permisos}"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{

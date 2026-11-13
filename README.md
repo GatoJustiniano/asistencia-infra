@@ -21,7 +21,7 @@ Qué crea `modules/tenant` por cada tenant:
 |---|---|
 | Security Group `asistencia-<id>-sg` | Puerto 80 abierto a internet; 22 (Ansible), 9100 (node_exporter) y 9101 (métricas de la app) solo desde el SG de la plataforma. No hay tráfico entre tenants. |
 | `random_password` + parámetro SSM `/asistencia/<id>/admin-key` (SecureString) | Clave del panel docente. No está en el código ni en la plantilla. |
-| Rol IAM + perfil de instancia | Solo puede leer `/asistencia/<id>/*` (no los secretos de otro tenant), más Session Manager para diagnóstico |
+| Rol IAM + perfil de instancia | Solo puede leer `/asistencia/<id>/*` (no los secretos de otro tenant), más Session Manager para diagnóstico. Lleva el permissions boundary `asistencia-limite-tenant` (variable `limite_permisos`), que crea `plataforma-tenants/infra/plataforma` y que el worker exige al crear roles. |
 | Volumen EBS `asistencia-<id>-datos` (gp3, cifrado) | Base SQLite montada en `/var/lib/asistencia`. Sobrevive a suspender y a recrear la EC2. |
 | EC2 `asistencia-<id>-app` (IMDSv2, disco raíz cifrado) | Frontend y backend. Arranca con la AMI de Packer más reciente (tag `Rol=ami-tenant`); cloud-init monta el volumen, lee el secreto de SSM e instala la app. |
 | `aws_ec2_instance_state` | `suspendido = true` detiene la EC2; `false` la vuelve a arrancar |
