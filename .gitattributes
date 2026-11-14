@@ -1,0 +1,6 @@
+# cloud-init y los scripts se ejecutan en Linux y su contenido forma parte del user_data:
+# con CRLF (checkout en Windows) cambiaría el hash y Terraform recrearía las instancias.
+*.yaml text eol=lf
+*.sh   text eol=lf
+*.hcl  text eol=lf
+*.tf   text eol=lf
