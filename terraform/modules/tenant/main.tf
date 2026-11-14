@@ -169,6 +169,7 @@ resource "aws_instance" "app" {
     MaxEstudiantes = var.limites.estudiantes
     MaxDocentes    = var.limites.docentes
     MaxCursos      = var.limites.cursos
+    InstitucionB64 = base64encode(var.nombre)
   })
   # Los datos viven en el EBS, así que recrear la instancia (p. ej. al cambiar
   # app_version) no pierde información.

@@ -35,6 +35,12 @@ variable "ami_id" {
 
 variable "demo_data" { type = bool }
 
+variable "nombre" {
+  description = "Nombre de la institución (título de la app)"
+  type        = string
+  default     = ""
+}
+
 variable "limite_permisos" {
   description = "Nombre de la política de permissions boundary del rol; vacío = sin límite"
   type        = string

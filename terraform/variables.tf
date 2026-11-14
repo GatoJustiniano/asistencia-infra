@@ -101,6 +101,16 @@ variable "ami_id" {
   default     = null
 }
 
+variable "nombre" {
+  description = "Nombre de la institución: la app lo muestra como título. Vacío = \"Asistencia\"."
+  type        = string
+  default     = ""
+  validation {
+    condition     = length(var.nombre) <= 120
+    error_message = "El nombre no puede pasar de 120 caracteres."
+  }
+}
+
 variable "limite_permisos" {
   description = "Nombre de la política IAM que se usa como permissions boundary del rol del tenant (la crea plataforma-tenants/infra/plataforma). Vacío = sin límite."
   type        = string

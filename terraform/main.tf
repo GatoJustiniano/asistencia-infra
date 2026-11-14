@@ -42,6 +42,7 @@ module "tenant" {
   source = "./modules/tenant"
 
   tenant_id       = var.tenant_id
+  nombre          = var.nombre
   entorno         = var.entorno
   plan            = var.plan
   region          = var.region
