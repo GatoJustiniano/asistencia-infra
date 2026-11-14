@@ -48,7 +48,7 @@ Con OpenTofu los comandos son los mismos, cambiando `terraform` por `tofu`.
 
 1. **Pulumi y CloudFormation:** todavía son la versión del práctico anterior (crean su propia VPC y usan las variables viejas de cloud-init). Hay que darles la misma interfaz que el módulo `tenant`, en versión reducida.
 2. **Ansible:** ver `ansible/README.md`.
-3. **Respaldos (fase final):** snapshots del volumen de datos.
+3. ~~Respaldos~~: hecho. El volumen de datos lleva el tag `Respaldo=<plan>` (lo respalda la política de DLM del plan) y la variable `snapshot_datos` permite restaurarlo (ver `plataforma-tenants/docs/respaldos.md`).
 
 ## Reglas
 

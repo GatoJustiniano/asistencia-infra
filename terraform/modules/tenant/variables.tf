@@ -35,6 +35,12 @@ variable "ami_id" {
 
 variable "demo_data" { type = bool }
 
+variable "snapshot_datos" {
+  description = "Snapshot desde el que se crea el volumen de datos (solo al restaurar)"
+  type        = string
+  default     = null
+}
+
 variable "nombre" {
   description = "Nombre de la institución (título de la app)"
   type        = string

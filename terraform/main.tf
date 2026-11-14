@@ -43,6 +43,7 @@ module "tenant" {
 
   tenant_id       = var.tenant_id
   nombre          = var.nombre
+  snapshot_datos  = var.snapshot_datos
   entorno         = var.entorno
   plan            = var.plan
   region          = var.region

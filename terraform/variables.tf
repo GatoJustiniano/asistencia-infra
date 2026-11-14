@@ -111,6 +111,16 @@ variable "nombre" {
   }
 }
 
+variable "snapshot_datos" {
+  description = "Solo para restaurar: snapshot (snap-...) del que se crea el volumen de datos, junto con -replace=module.tenant.aws_ebs_volume.datos"
+  type        = string
+  default     = null
+  validation {
+    condition     = var.snapshot_datos == null || can(regex("^snap-[0-9a-f]{8,17}$", var.snapshot_datos))
+    error_message = "snapshot_datos debe ser un id de snapshot (snap-...)."
+  }
+}
+
 variable "limite_permisos" {
   description = "Nombre de la política IAM que se usa como permissions boundary del rol del tenant (la crea plataforma-tenants/infra/plataforma). Vacío = sin límite."
   type        = string

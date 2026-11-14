@@ -133,7 +133,20 @@ resource "aws_ebs_volume" "datos" {
   size              = var.data_volume_gb
   type              = "gp3"
   encrypted         = true
-  tags              = { Name = "${local.prefijo}-datos" }
+  # Restauración (RF-19): el worker reemplaza el volumen con
+  #   apply -replace=module.tenant.aws_ebs_volume.datos -var snapshot_datos=snap-...
+  # El volumen nuevo nace del snapshot; como el sistema de archivos conserva su UUID,
+  # la instancia (que se recrea porque cambia el id del volumen) lo monta sin formatearlo.
+  snapshot_id = var.snapshot_datos
+  # Respaldo=<plan>: la política de AWS Data Lifecycle Manager de ese plan lo respalda.
+  # Solo este volumen lleva el tag; el disco del sistema no se respalda.
+  tags = { Name = "${local.prefijo}-datos", Respaldo = var.plan }
+
+  lifecycle {
+    # Después de restaurar, las siguientes operaciones no envían snapshot_datos:
+    # eso no debe volver a reemplazar el volumen.
+    ignore_changes = [snapshot_id]
+  }
 }
 
 # ---------- Cómputo ----------
