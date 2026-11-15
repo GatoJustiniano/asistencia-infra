@@ -22,9 +22,13 @@ write_files:
       fi
 
       # 1) Volumen de datos del tenant: esperar a que se adjunte, formatear solo si está vacío, montar
+      # Terraform pasa el id del volumen. CloudFormation no lo conoce al generar el user data
+      # (el volumen nace en el mismo stack): entonces se usa /dev/sdf, el nombre con el que se
+      # adjunta; en Amazon Linux 2023 udev crea ese alias para el disco NVMe.
       VOL_ID="${VolumenDatos}"
-      DEV="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_$${VOL_ID/-/}"
-      for i in $(seq 1 60); do [ -e "$DEV" ] && break; echo "Esperando volumen $VOL_ID ($i)"; sleep 5; done
+      if [ -n "$VOL_ID" ]; then DEV="/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_$${VOL_ID/-/}"; else DEV=/dev/sdf; fi
+      for i in $(seq 1 60); do [ -e "$DEV" ] && break; echo "Esperando el volumen de datos $DEV ($i)"; sleep 5; done
+      DEV=$(readlink -f "$DEV") # blkid y mkfs sobre el dispositivo real, no sobre el alias
       [ -e "$DEV" ] || { echo "El volumen de datos no se adjuntó"; exit 1; }
       if ! blkid "$DEV" >/dev/null 2>&1; then
         mkfs.xfs -L asist-datos "$DEV" # XFS: etiqueta de máx. 12 caracteres

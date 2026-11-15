@@ -6,7 +6,7 @@ Plantillas que crean y configuran **un tenant**. Las ejecuta el worker de [plata
 |---|---|---|
 | `terraform/` | Terraform / OpenTofu | Motor principal. El mismo HCL sirve para los dos binarios. |
 | `pulumi/` | Pulumi (TypeScript) | Segunda implementación reducida, para comparar. |
-| `cloudformation/` | CloudFormation | Segunda implementación reducida con stacks anidados. |
+| `cloudformation/` | CloudFormation | Segunda implementación reducida: `tenant.yaml`, un stack por tenant. `main.yaml`, `templates/` y `parametros/` son del práctico anterior y no se usan. |
 | `cloud-init/` | cloud-init | Configuración del primer arranque de la EC2 del tenant. |
 | `packer/` | Packer | AMI base de los tenants: Node.js, node_exporter y caché de dependencias de la app. |
 | `ansible/` | Ansible | Configuración posterior de las EC2 que ya existen. |
@@ -46,7 +46,7 @@ Con OpenTofu los comandos son los mismos, cambiando `terraform` por `tofu`.
 
 ## Pendiente
 
-1. **Pulumi y CloudFormation:** todavía son la versión del práctico anterior (crean su propia VPC y usan las variables viejas de cloud-init). Hay que darles la misma interfaz que el módulo `tenant`, en versión reducida.
+1. ~~CloudFormation~~: hecho, en `cloudformation/tenant.yaml`; lo ejecuta `plataforma-tenants/worker/motores/cloudformation.js`. **Pulumi** sigue siendo la versión del práctico anterior; se cubre con la comparación técnica de `plataforma-tenants/docs/arquitectura.md`.
 2. **Ansible:** ver `ansible/README.md`.
 3. ~~Respaldos~~: hecho. El volumen de datos lleva el tag `Respaldo=<plan>` (lo respalda la política de DLM del plan) y la variable `snapshot_datos` permite restaurarlo (ver `plataforma-tenants/docs/respaldos.md`).
 

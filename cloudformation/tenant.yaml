@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Un tenant de Asistencia (implementacion reducida en CloudFormation, RF-08): SG, rol IAM con
+  permissions boundary, volumen de datos EBS cifrado y EC2. Equivale al modulo tenant de Terraform.
+  La ejecuta el worker de plataforma-tenants (worker/motores/cloudformation.js).
+
+# Diferencias con Terraform, por limitaciones de CloudFormation (ver docs/arquitectura.md de la plataforma):
+#  - El secreto del tenant (SecureString en SSM) lo crea el worker antes del stack:
+#    AWS::SSM::Parameter no admite SecureString.
+#  - Suspender y reanudar lo hace el worker con stop/start-instances: CloudFormation no tiene
+#    un recurso para el estado de una instancia.
+#  - La red, la AMI y el user data los resuelve el worker y llegan como parámetros.
+
+Parameters:
+  TenantId:
+    Type: String
+    AllowedPattern: "^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$"
+  Entorno:
+    Type: String
+    AllowedValues: [dev, qa, prod]
+  Plan:
+    Type: String
+  InstanceType:
+    Type: String
+  RootVolumeGb:
+    Type: Number
+    MinValue: 8
+  DataVolumeGb:
+    Type: Number
+    MinValue: 1
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+  SgPlataforma:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: SG de la plataforma (Prometheus mide los puertos 9100 y 9101)
+  AmiId:
+    Type: AWS::EC2::Image::Id
+  UserData:
+    Type: String
+    Description: cloud-init renderizado por el worker, comprimido con gzip y en base64
+  LimitePermisos:
+    Type: String
+    Default: asistencia-limite-tenant
+    Description: Permissions boundary del rol (lo crea plataforma-tenants/infra/plataforma)
+
+Resources:
+  # ---------- Red: solo la app es pública; las métricas y SSH, solo desde la plataforma ----------
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub asistencia-${TenantId}-sg
+      GroupDescription: !Sub "Tenant ${TenantId}: HTTP publico; metricas solo desde la plataforma"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: App web }
+        - { IpProtocol: tcp, FromPort: 9100, ToPort: 9100, SourceSecurityGroupId: !Ref SgPlataforma, Description: node_exporter }
+        - { IpProtocol: tcp, FromPort: 9101, ToPort: 9101, SourceSecurityGroupId: !Ref SgPlataforma, Description: app_metricas }
+        - { IpProtocol: tcp, FromPort: 22, ToPort: 22, SourceSecurityGroupId: !Ref SgPlataforma, Description: ssh }
+      SecurityGroupEgress:
+        - { IpProtocol: "-1", CidrIp: 0.0.0.0/0 }
+      Tags:
+        - { Key: Name, Value: !Sub "asistencia-${TenantId}-sg" }
+
+  # ---------- IAM: la instancia solo lee SUS parámetros ----------
+  Rol:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub asistencia-${TenantId}-rol
+      PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/${LimitePermisos}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - { Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: sts:AssumeRole }
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: leer-ssm-propio
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [ssm:GetParameter, ssm:GetParametersByPath]
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/asistencia/${TenantId}/*
+      # El boundary limita la lectura de secretos por este tag (aws:PrincipalTag/Tenant)
+      Tags:
+        - { Key: Tenant, Value: !Ref TenantId }
+
+  Perfil:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub asistencia-${TenantId}-perfil
+      Roles: [!Ref Rol]
+
+  # ---------- Datos: volumen EBS propio (SQLite) ----------
+  Datos:
+    Type: AWS::EC2::Volume
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      Size: !Ref DataVolumeGb
+      VolumeType: gp3
+      Encrypted: true
+      Tags:
+        - { Key: Name, Value: !Sub "asistencia-${TenantId}-datos" }
+        - { Key: Respaldo, Value: !Ref Plan } # política de respaldos (DLM) del plan
+
+  # ---------- Cómputo ----------
+  App:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds: [!Ref SecurityGroup]
+      IamInstanceProfile: !Ref Perfil
+      MetadataOptions:
+        HttpTokens: required # IMDSv2
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: { VolumeSize: !Ref RootVolumeGb, VolumeType: gp3, Encrypted: true }
+      UserData: !Ref UserData
+      Tags:
+        - { Key: Name, Value: !Sub "asistencia-${TenantId}-app" }
+
+  Conexion:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      Device: /dev/sdf # cloud-init lo busca con este nombre
+      InstanceId: !Ref App
+      VolumeId: !Ref Datos
+
+Outputs:
+  InstanceId:
+    Value: !Ref App
+  DataVolumeId:
+    Value: !Ref Datos
+  SecurityGroupId:
+    Value: !Ref SecurityGroup
+  AmiId:
+    Value: !Ref AmiId
+  SsmPrefijo:
+    Value: !Sub /asistencia/${TenantId}
